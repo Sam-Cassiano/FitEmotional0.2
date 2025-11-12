@@ -5,30 +5,26 @@ import androidx.lifecycle.viewModelScope
 import com.example.fitemotional.data.local.DiaryDao
 import com.example.fitemotional.data.model.DiaryEntry
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
  * ViewModel responsável por gerenciar as operações do diário.
- * Lida com a inserção e leitura das entradas no banco de dados Room.
+ * Lida com a inserção, leitura e atualização das entradas no banco de dados Room.
  */
-class BNovaEntradaViewModel(private val diaryDao: DiaryDao) : ViewModel() {
+class BNovaEntradaViewModel(
+    val diaryDao: DiaryDao // 🔹 público para ser usado em outras telas (ex: Estatísticas)
+) : ViewModel() {
 
     /**
      * Fluxo com todas as entradas do diário.
-     * É observado em tempo real pela tela AHomeDiario.
+     * Observado em tempo real pelas telas AHomeDiario e CEstatisticas.
      */
     val allEntries: Flow<List<DiaryEntry>> = diaryDao.getAllEntries()
 
     /**
      * Salva uma nova entrada no diário.
-     *
-     * @param date Data da entrada.
-     * @param mood Humor selecionado.
-     * @param intensity Intensidade do humor (0-10).
-     * @param activities Lista de atividades realizadas.
-     * @param notes Notas e reflexões.
-     * @param gratitude Registro de gratidão.
      */
     fun salvarEntrada(
         date: LocalDate,
@@ -47,9 +43,46 @@ class BNovaEntradaViewModel(private val diaryDao: DiaryDao) : ViewModel() {
             gratitude = gratitude
         )
 
-        // Inserção assíncrona
         viewModelScope.launch {
             diaryDao.insert(entry)
         }
+    }
+
+    /**
+     * Remove uma entrada específica do diário.
+     */
+    fun deletarEntrada(entry: DiaryEntry) {
+        viewModelScope.launch {
+            diaryDao.delete(entry)
+        }
+    }
+
+    /**
+     * Atualiza uma entrada existente no banco.
+     */
+    fun atualizarEntrada(entry: DiaryEntry) {
+        viewModelScope.launch {
+            diaryDao.update(entry)
+        }
+    }
+
+    /**
+     * Retorna as entradas filtradas por data.
+     *
+     * Observação: o DAO espera a data como String (formatada), então convertemos aqui.
+     */
+    fun getEntriesByDate(date: LocalDate): Flow<List<DiaryEntry>> {
+        val dateString = date.toString() // ISO: "yyyy-MM-dd" — compatível com a query do DAO
+        return diaryDao.getEntriesByDate(dateString)
+    }
+
+    /**
+     * Calcula a distribuição de atividades em todas as entradas.
+     * Útil para gráficos de estatísticas (ex: Atividades mais frequentes).
+     */
+    val atividadesFrequentes: Flow<Map<String, Int>> = allEntries.map { entries ->
+        entries.flatMap { it.activities }           // Junta todas as atividades
+            .groupingBy { it }                      // Agrupa pelo nome da atividade
+            .eachCount()                             // Conta quantas vezes cada atividade aparece
     }
 }

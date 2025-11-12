@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -13,6 +14,8 @@ import com.example.fitemotional.ui.screens.BNovaEntradaScreen
 import com.example.fitemotional.ui.screens.CEstatisticas
 import com.example.fitemotional.ui.screens.CPerfil
 import com.example.fitemotional.ui.viewmodel.BNovaEntradaViewModel
+import com.example.fitemotional.ui.viewmodel.EstatisticasViewModel
+import com.example.fitemotional.ui.viewmodel.EstatisticasViewModelFactory
 
 @Composable
 fun NavGraph(
@@ -20,6 +23,13 @@ fun NavGraph(
     bNovaEntradaViewModel: BNovaEntradaViewModel
 ) {
     val navController = rememberNavController()
+
+    // 🔹 Cria o EstatísticasViewModel usando o mesmo DAO do BNovaEntradaViewModel
+    val estatisticasViewModel: EstatisticasViewModel = viewModel(
+        factory = EstatisticasViewModelFactory(
+            bNovaEntradaViewModel.diaryDao
+        )
+    )
 
     Scaffold(
         bottomBar = { BottomBar(navController = navController) }
@@ -37,19 +47,25 @@ fun NavGraph(
                 )
             }
 
-            // ✍️ Tela de nova entrada (recebe o ViewModel)
+            // ✍️ Tela de nova entrada
             composable("novaEntrada") {
                 BNovaEntradaScreen(viewModel = bNovaEntradaViewModel)
             }
 
             // 📊 Estatísticas
             composable("estatisticas") {
-                CEstatisticas(navController)
+                CEstatisticas(
+                    navController = navController,
+                    viewModel = estatisticasViewModel
+                )
             }
 
-            // 👤 Perfil
+            // 👤 Perfil — agora recebe o EstatisticasViewModel
             composable("perfil") {
-                CPerfil(navController)
+                CPerfil(
+                    navController = navController,
+                    viewModel = estatisticasViewModel
+                )
             }
         }
     }
